@@ -1,4 +1,4 @@
-@ The code starting here is just to help you test writeHeader in a
+@ The code starting here is just to help you test writeRGB in a
 @ standalone program. It is not part of the assignment.
 
                 .global _start
@@ -11,11 +11,10 @@ buffer:         .space  100
 
                 .text
 _start:
-                @ call writeHeader
+                @ call writeRGB
                 ldr     r0, =buffer
-                mov     r1, #1024
-                mov     r2, #768
-                bl      writeHeader
+                ldr     r1, =0x112233
+                bl      writeRGB
 
                 @ write the buffer to stdout
                 mov     r2, r0

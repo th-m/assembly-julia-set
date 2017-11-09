@@ -1,50 +1,46 @@
-<html><head></head><body><h1>writeHeader</h1>
+<html><head></head><body><h1>writeRGB</h1>
 
-<p>Write an assembly language function to write the header for a PPM
-file to a buffer. More information about PPM files is available
-here:</p>
+<p>Write an assembly language function to write a single color to a
+buffer:</p>
+
+<pre><code>writeRGB(buffer, color) -&gt; number of bytes written
+</code></pre>
+
+<p>The color is encoded as a single integer value, with each color
+channel using 8 bits. The least significant 8 bits comprise the blue
+color channel, the next 8 bits the green channel, and the next 8
+bits the red channel.</p>
+
+<p>When written as a hexadecimal constant, the red, green, and blue
+colors each use two hexadecimal digits and read from left to right.
+For example:</p>
 
 <ul>
-<li><a href="http://en.wikipedia.org/wiki/Netpbm_format">http://en.wikipedia.org/wiki/Netpbm_format</a></li>
+<li>0x112233</li>
 </ul>
 
-<p>For this function, the important part is the header, which has a
-simple format:</p>
+<p>Is a color with 0x11 for the red value (17 in decimal), 0x22 for the
+green value (34 in decimal), and 0x33 for the blue value (51 in
+decimal).</p>
 
-<pre><code>P3
-xsize ysize
-colormax
-</code></pre>
+<p>The function should write these values to the buffer by calling
+<code>itoa</code> on each value, and it should add spaces between the values
+(but not at the end).</p>
 
-<p>The “P3” is hard-coded, and signals the format in use (this is
-called a magic value). The xsize and ysize values are integers
-written out as plain text, and indicate the size of the image in
-pixels. The colormax value tells the maximum color value for each
-color channel (red, green, and blue), and is hard-coded at 255 for
-our purposes.</p>
+<p>Note the calling conventions for ARM functions. When the function
+is called, its parameters will be in these registers:</p>
 
-<p>For a 1024×768 image, the header would be:</p>
+<ul>
+<li>r0: buffer (1st parameter)</li>
+<li>r1: rgb value (2nd parameter)</li>
+</ul>
 
-<pre><code>P3
-1024 768
-255
-</code></pre>
-
-<p>Which is the string: &#34;P3\n1024 768\n255\n&#34;</p>
-
-<p>Your job is to write that header into a buffer, and return the
-number of bytes written.</p>
-
-<p>The function will take three parameters:</p>
-
-<pre><code>writeHeader(buffer, xsize, ysize)
-</code></pre>
-
-<p>and return the number of bytes written to the buffer.</p>
+<p>When writeRGB finishes, it should return the number of bytes written
+to the buffer in the r0 register.</p>
 
 <h2>Registers</h2>
 
-<p>Your implementation of <code>writeHeader</code> will make calls to <code>itoa</code>.
+<p>Your implementation of <code>writeRGB</code> will make calls to <code>itoa</code>.
 To prepare for a call to a function (<code>itoa</code> in this case), you
 should place the first parameter value in r0 and the second in r1.
 Then make the function call using:</p>
@@ -74,6 +70,38 @@ This does not replace your need to save callee-saved registers
 that you plan to use, it is just another occasion to spill
 register values onto the stack for temporary storage.</p></li>
 </ol>
+
+<h2>Shifts and masks</h2>
+
+<p>To extract parts of a single word, you need to think of the value as
+a collection of bits, rather than as a single integer value. When
+using <code>mov</code>, <code>add</code>, <code>orr</code>, <code>and</code>, etc., you can use the barrel
+shifter to move values around. For example, to extract the green
+part of a color, you could do the following. This assumes the entire
+color value is in r7, and it puts just the green part into r6:</p>
+
+<pre><code>mov r6, #0xff
+</code></pre>
+
+<p>This loads 0xff (called a <em>mask</em>) into r6, which is the number
+11111111 (8 bits that are 1) in binary. When you <code>and</code> another value
+with that number, it will leave those eight bits alone, and will set
+all other bits in the word to zero. This instruction:</p>
+
+<pre><code>and r6, r6, r7, lsr #8
+</code></pre>
+
+<p>takes the value in r7 and shifts it right either times. Since the
+green part of the color normally occupies bits 8–15, this shifts
+them into positions 0–7. It then performs the <code>and</code> operation with
+the mask value, thus turning off all other bits and leaving only the
+value of the green color channel in r6. The bits are also in the
+right bit positions so that the green value will be between 0 and
+255.</p>
+
+<p>Similar code can be used to isolate the red part (shift right 16
+times instead of 8) and the blue part (no shifting required, just
+<code>and</code> with the mask value).</p>
 
 <h2>Testing</h2>
 

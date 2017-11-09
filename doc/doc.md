@@ -1,52 +1,44 @@
-writeHeader
-===========
+writeRGB
+========
 
-Write an assembly language function to write the header for a PPM
-file to a buffer. More information about PPM files is available
-here:
+Write an assembly language function to write a single color to a
+buffer:
 
-* [http://en.wikipedia.org/wiki/Netpbm_format](http://en.wikipedia.org/wiki/Netpbm_format)
+    writeRGB(buffer, color) -> number of bytes written
 
-For this function, the important part is the header, which has a
-simple format:
+The color is encoded as a single integer value, with each color
+channel using 8 bits. The least significant 8 bits comprise the blue
+color channel, the next 8 bits the green channel, and the next 8
+bits the red channel.
 
-```
-P3
-xsize ysize
-colormax
-```
+When written as a hexadecimal constant, the red, green, and blue
+colors each use two hexadecimal digits and read from left to right.
+For example:
 
-The “P3” is hard-coded, and signals the format in use (this is
-called a magic value). The xsize and ysize values are integers
-written out as plain text, and indicate the size of the image in
-pixels. The colormax value tells the maximum color value for each
-color channel (red, green, and blue), and is hard-coded at 255 for
-our purposes.
+* 0x112233
 
-For a 1024×768 image, the header would be:
+Is a color with 0x11 for the red value (17 in decimal), 0x22 for the
+green value (34 in decimal), and 0x33 for the blue value (51 in
+decimal).
 
-```
-P3
-1024 768
-255
-```
+The function should write these values to the buffer by calling
+`itoa` on each value, and it should add spaces between the values
+(but not at the end).
 
-Which is the string: "P3\n1024 768\n255\n"
+Note the calling conventions for ARM functions. When the function
+is called, its parameters will be in these registers:
 
-Your job is to write that header into a buffer, and return the
-number of bytes written.
+* r0: buffer (1st parameter)
+* r1: rgb value (2nd parameter)
 
-The function will take three parameters:
-
-    writeHeader(buffer, xsize, ysize)
-
-and return the number of bytes written to the buffer.
+When writeRGB finishes, it should return the number of bytes written
+to the buffer in the r0 register.
 
 
 Registers
 ---------
 
-Your implementation of `writeHeader` will make calls to `itoa`.
+Your implementation of `writeRGB` will make calls to `itoa`.
 To prepare for a call to a function (`itoa` in this case), you
 should place the first parameter value in r0 and the second in r1.
 Then make the function call using:
@@ -73,6 +65,38 @@ function call. There are two basic approaches to this problem:
     This does not replace your need to save callee-saved registers
     that you plan to use, it is just another occasion to spill
     register values onto the stack for temporary storage.
+
+
+Shifts and masks
+----------------
+
+To extract parts of a single word, you need to think of the value as
+a collection of bits, rather than as a single integer value. When
+using `mov`, `add`, `orr`, `and`, etc., you can use the barrel
+shifter to move values around. For example, to extract the green
+part of a color, you could do the following. This assumes the entire
+color value is in r7, and it puts just the green part into r6:
+
+    mov r6, #0xff
+
+This loads 0xff (called a *mask*) into r6, which is the number
+11111111 (8 bits that are 1) in binary. When you `and` another value
+with that number, it will leave those eight bits alone, and will set
+all other bits in the word to zero. This instruction:
+
+    and r6, r6, r7, lsr #8
+
+takes the value in r7 and shifts it right either times. Since the
+green part of the color normally occupies bits 8–15, this shifts
+them into positions 0–7. It then performs the `and` operation with
+the mask value, thus turning off all other bits and leaving only the
+value of the green color channel in r6. The bits are also in the
+right bit positions so that the green value will be between 0 and
+255.
+
+Similar code can be used to isolate the red part (shift right 16
+times instead of 8) and the blue part (no shifting required, just
+`and` with the mask value).
 
 
 Testing
