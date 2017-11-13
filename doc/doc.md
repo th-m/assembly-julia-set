@@ -1,106 +1,130 @@
-writeRGB
-========
+Create a file with a header
+===========================
 
-Write an assembly language function to write a single color to a
-buffer:
-
-    writeRGB(buffer, color) -> number of bytes written
-
-The color is encoded as a single integer value, with each color
-channel using 8 bits. The least significant 8 bits comprise the blue
-color channel, the next 8 bits the green channel, and the next 8
-bits the red channel.
-
-When written as a hexadecimal constant, the red, green, and blue
-colors each use two hexadecimal digits and read from left to right.
-For example:
-
-* 0x112233
-
-Is a color with 0x11 for the red value (17 in decimal), 0x22 for the
-green value (34 in decimal), and 0x33 for the blue value (51 in
-decimal).
-
-The function should write these values to the buffer by calling
-`itoa` on each value, and it should add spaces between the values
-(but not at the end).
-
-Note the calling conventions for ARM functions. When the function
-is called, its parameters will be in these registers:
-
-* r0: buffer (1st parameter)
-* r1: rgb value (2nd parameter)
-
-When writeRGB finishes, it should return the number of bytes written
-to the buffer in the r0 register.
+In this project, you will use the functions you have written in
+previous steps to generate a complete .ppm image with a gradient
+color fill.
 
 
-Registers
----------
+start and run
+-------------
 
-Your implementation of `writeRGB` will make calls to `itoa`.
-To prepare for a call to a function (`itoa` in this case), you
-should place the first parameter value in r0 and the second in r1.
-Then make the function call using:
+You will be writing a standalone program, but it must also be tested
+using a unit test framework. The included file `start.s` is
+necessary when running the code as a standalone program. All it does
+is call the function `run` and then exit.
 
-    bl  itoa
+When you are running your code using unit tests (for grading or the
+"test" action), the `start.s` file will be ignored.
 
-When `itoa` returns, you should assume that any valus in r0–r3, r12,
-and r14 have been overwritten. If you have values stored in these
-caller-saved registers, you must save them before making the
-function call. There are two basic approaches to this problem:
-
-1.  Pick call-saved registers and use those instead. At the
-    beginning of your function, you need to push the old
-    contents of those registers to the stack, and you need to
-    pop them again at the end before returning. In between, you can
-    use them freely, and assume that their values remain consistent
-    across function calls (since any function you call will save the
-    value and restore it just like you are doing).
-
-2.  Use the caller-saved registers, but save the values before
-    making the function call and restore them afterward. In this
-    approach, you push the values to the stack immediately before
-    making a function call, and pop them off the stack right after.
-    This does not replace your need to save callee-saved registers
-    that you plan to use, it is just another occasion to spill
-    register values onto the stack for temporary storage.
+The bulk of your code for this project will be written in a function
+called `run`.
 
 
-Shifts and masks
-----------------
+System calls
+------------
 
-To extract parts of a single word, you need to think of the value as
-a collection of bits, rather than as a single integer value. When
-using `mov`, `add`, `orr`, `and`, etc., you can use the barrel
-shifter to move values around. For example, to extract the green
-part of a color, you could do the following. This assumes the entire
-color value is in r7, and it puts just the green part into r6:
+A system call is similar to a function call, except that the call is
+being made to the operating system instead of to more code within
+your program. The basic process is the same as for a function call,
+with parameters going in the same registers (at least for the
+parameters we will use). In addition, the system call number must be
+loaded into the r7 register, and then instead of issuing a “bl”
+instruction, you should issue a “svc #0” instruction.
 
-    mov r6, #0xff
+For example, to write a message to stdout (which always has the file
+descriptor 1):
 
-This loads 0xff (called a *mask*) into r6, which is the number
-11111111 (8 bits that are 1) in binary. When you `and` another value
-with that number, it will leave those eight bits alone, and will set
-all other bits in the word to zero. This instruction:
+``` asm
+mov r0, #1                      @ stdout
+ldr r1, =buffer                 @ where to find the data to write
+mov r2, #20                     @ number of bytes to write
+mov r7, #sys_write              @ sys_write is 1, defined elsewhere
+svc #0
+```
 
-    and r6, r6, r7, lsr #8
+The result of the call is in r0 after the call finishes. If this
+value is negative, it normally indicates an error.
 
-takes the value in r7 and shifts it right either times. Since the
-green part of the color normally occupies bits 8–15, this shifts
-them into positions 0–7. It then performs the `and` operation with
-the mask value, thus turning off all other bits and leaving only the
-value of the green color channel in r6. The bits are also in the
-right bit positions so that the green value will be between 0 and
-255.
+While testing your code, it may be helpful to use an error status
+code as the value in a call to exit. If you do this, then you can
+look up the error code in this chart (the syscall result is the
+error code negated):
 
-Similar code can be used to isolate the red part (shift right 16
-times instead of 8) and the blue part (no shifting required, just
-`and` with the mask value).
+``` c
+#define EPERM        1  /* Operation not permitted */
+#define ENOENT       2  /* No such file or directory */
+#define ESRCH        3  /* No such process */
+#define EINTR        4  /* Interrupted system call */
+#define EIO          5  /* I/O error */
+#define ENXIO        6  /* No such device or address */
+#define E2BIG        7  /* Argument list too long */
+#define ENOEXEC      8  /* Exec format error */
+#define EBADF        9  /* Bad file number */
+#define ECHILD      10  /* No child processes */
+#define EAGAIN      11  /* Try again */
+#define ENOMEM      12  /* Out of memory */
+#define EACCES      13  /* Permission denied */
+#define EFAULT      14  /* Bad address */
+#define ENOTBLK     15  /* Block device required */
+#define EBUSY       16  /* Device or resource busy */
+#define EEXIST      17  /* File exists */
+#define EXDEV       18  /* Cross-device link */
+#define ENODEV      19  /* No such device */
+#define ENOTDIR     20  /* Not a directory */
+#define EISDIR      21  /* Is a directory */
+#define EINVAL      22  /* Invalid argument */
+#define ENFILE      23  /* File table overflow */
+#define EMFILE      24  /* Too many open files */
+#define ENOTTY      25  /* Not a typewriter */
+#define ETXTBSY     26  /* Text file busy */
+#define EFBIG       27  /* File too large */
+#define ENOSPC      28  /* No space left on device */
+#define ESPIPE      29  /* Illegal seek */
+#define EROFS       30  /* Read-only file system */
+#define EMLINK      31  /* Too many links */
+#define EPIPE       32  /* Broken pipe */
+#define EDOM        33  /* Math argument out of domain of func */
+#define ERANGE      34  /* Math result not representable */
+```
+
+The syscalls you will need in this assignment are as follows:
+
+*   4: `sys_write(fd, buffer, count)` returns the number of bytes
+    written, or negative to signal an error.
+*   5: `sys_open(filename, flags, mode)` returns the file
+    descriptor, or negative to signal an error.
+*   6: `sys_close(fd)` returns negative to signal an error.
+*   1: `sys_exit(status)` does not return.
 
 
-Testing
--------
+What to write
+-------------
 
-To test your code as a standalone program, use the `_start` block
-included in `start.s`.
+For this first step, you will create a file, write a header to it,
+close the file, and then return.
+
+Your code should implement this pseudo-code in `run.s`:
+
+```
+fd = open(filename, flags, mode)
+if fd < 0: return fail_open
+
+# write the header
+length = writeHeader(buffer, xsize, ysize)
+status = write(fd, buffer, length)
+if status < 0: return fail_writeheader
+
+# close the file
+status = close(fd)
+if status < 0: return fail_close
+return 0
+```
+
+The starter code include constant definitions for flags and mode as
+well as for the system calls you will need.
+
+The starter code also include a file `params.s` that defines some
+data in the data segment, including `filename`, `xsize`, and
+`ysize`. You should use these values and not hard-code them
+anywhere.

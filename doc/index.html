@@ -1,110 +1,123 @@
-<html><head></head><body><h1>writeRGB</h1>
+<html><head></head><body><h1>Create a file with a header</h1>
 
-<p>Write an assembly language function to write a single color to a
-buffer:</p>
+<p>In this project, you will use the functions you have written in
+previous steps to generate a complete .ppm image with a gradient
+color fill.</p>
 
-<pre><code>writeRGB(buffer, color) -&gt; number of bytes written
+<h2>start and run</h2>
+
+<p>You will be writing a standalone program, but it must also be tested
+using a unit test framework. The included file <code>start.s</code> is
+necessary when running the code as a standalone program. All it does
+is call the function <code>run</code> and then exit.</p>
+
+<p>When you are running your code using unit tests (for grading or the
+&#34;test&#34; action), the <code>start.s</code> file will be ignored.</p>
+
+<p>The bulk of your code for this project will be written in a function
+called <code>run</code>.</p>
+
+<h2>System calls</h2>
+
+<p>A system call is similar to a function call, except that the call is
+being made to the operating system instead of to more code within
+your program. The basic process is the same as for a function call,
+with parameters going in the same registers (at least for the
+parameters we will use). In addition, the system call number must be
+loaded into the r7 register, and then instead of issuing a “bl”
+instruction, you should issue a “svc #0” instruction.</p>
+
+<p>For example, to write a message to stdout (which always has the file
+descriptor 1):</p>
+
+<pre><code class="language-asm">mov r0, #1                      @ stdout
+ldr r1, =buffer                 @ where to find the data to write
+mov r2, #20                     @ number of bytes to write
+mov r7, #sys_write              @ sys_write is 1, defined elsewhere
+svc #0
 </code></pre>
 
-<p>The color is encoded as a single integer value, with each color
-channel using 8 bits. The least significant 8 bits comprise the blue
-color channel, the next 8 bits the green channel, and the next 8
-bits the red channel.</p>
+<p>The result of the call is in r0 after the call finishes. If this
+value is negative, it normally indicates an error.</p>
 
-<p>When written as a hexadecimal constant, the red, green, and blue
-colors each use two hexadecimal digits and read from left to right.
-For example:</p>
+<p>While testing your code, it may be helpful to use an error status
+code as the value in a call to exit. If you do this, then you can
+look up the error code in this chart (the syscall result is the
+error code negated):</p>
+
+<pre><code class="language-c">#define EPERM        1  /* Operation not permitted */
+#define ENOENT       2  /* No such file or directory */
+#define ESRCH        3  /* No such process */
+#define EINTR        4  /* Interrupted system call */
+#define EIO          5  /* I/O error */
+#define ENXIO        6  /* No such device or address */
+#define E2BIG        7  /* Argument list too long */
+#define ENOEXEC      8  /* Exec format error */
+#define EBADF        9  /* Bad file number */
+#define ECHILD      10  /* No child processes */
+#define EAGAIN      11  /* Try again */
+#define ENOMEM      12  /* Out of memory */
+#define EACCES      13  /* Permission denied */
+#define EFAULT      14  /* Bad address */
+#define ENOTBLK     15  /* Block device required */
+#define EBUSY       16  /* Device or resource busy */
+#define EEXIST      17  /* File exists */
+#define EXDEV       18  /* Cross-device link */
+#define ENODEV      19  /* No such device */
+#define ENOTDIR     20  /* Not a directory */
+#define EISDIR      21  /* Is a directory */
+#define EINVAL      22  /* Invalid argument */
+#define ENFILE      23  /* File table overflow */
+#define EMFILE      24  /* Too many open files */
+#define ENOTTY      25  /* Not a typewriter */
+#define ETXTBSY     26  /* Text file busy */
+#define EFBIG       27  /* File too large */
+#define ENOSPC      28  /* No space left on device */
+#define ESPIPE      29  /* Illegal seek */
+#define EROFS       30  /* Read-only file system */
+#define EMLINK      31  /* Too many links */
+#define EPIPE       32  /* Broken pipe */
+#define EDOM        33  /* Math argument out of domain of func */
+#define ERANGE      34  /* Math result not representable */
+</code></pre>
+
+<p>The syscalls you will need in this assignment are as follows:</p>
 
 <ul>
-<li>0x112233</li>
+<li>4: <code>sys_write(fd, buffer, count)</code> returns the number of bytes
+written, or negative to signal an error.</li>
+<li>5: <code>sys_open(filename, flags, mode)</code> returns the file
+descriptor, or negative to signal an error.</li>
+<li>6: <code>sys_close(fd)</code> returns negative to signal an error.</li>
+<li>1: <code>sys_exit(status)</code> does not return.</li>
 </ul>
 
-<p>Is a color with 0x11 for the red value (17 in decimal), 0x22 for the
-green value (34 in decimal), and 0x33 for the blue value (51 in
-decimal).</p>
+<h2>What to write</h2>
 
-<p>The function should write these values to the buffer by calling
-<code>itoa</code> on each value, and it should add spaces between the values
-(but not at the end).</p>
+<p>For this first step, you will create a file, write a header to it,
+close the file, and then return.</p>
 
-<p>Note the calling conventions for ARM functions. When the function
-is called, its parameters will be in these registers:</p>
+<p>Your code should implement this pseudo-code in <code>run.s</code>:</p>
 
-<ul>
-<li>r0: buffer (1st parameter)</li>
-<li>r1: rgb value (2nd parameter)</li>
-</ul>
+<pre><code>fd = open(filename, flags, mode)
+if fd &lt; 0: return fail_open
 
-<p>When writeRGB finishes, it should return the number of bytes written
-to the buffer in the r0 register.</p>
+# write the header
+length = writeHeader(buffer, xsize, ysize)
+status = write(fd, buffer, length)
+if status &lt; 0: return fail_writeheader
 
-<h2>Registers</h2>
-
-<p>Your implementation of <code>writeRGB</code> will make calls to <code>itoa</code>.
-To prepare for a call to a function (<code>itoa</code> in this case), you
-should place the first parameter value in r0 and the second in r1.
-Then make the function call using:</p>
-
-<pre><code>bl  itoa
+# close the file
+status = close(fd)
+if status &lt; 0: return fail_close
+return 0
 </code></pre>
 
-<p>When <code>itoa</code> returns, you should assume that any valus in r0–r3, r12,
-and r14 have been overwritten. If you have values stored in these
-caller-saved registers, you must save them before making the
-function call. There are two basic approaches to this problem:</p>
+<p>The starter code include constant definitions for flags and mode as
+well as for the system calls you will need.</p>
 
-<ol>
-<li><p>Pick call-saved registers and use those instead. At the
-beginning of your function, you need to push the old
-contents of those registers to the stack, and you need to
-pop them again at the end before returning. In between, you can
-use them freely, and assume that their values remain consistent
-across function calls (since any function you call will save the
-value and restore it just like you are doing).</p></li>
-
-<li><p>Use the caller-saved registers, but save the values before
-making the function call and restore them afterward. In this
-approach, you push the values to the stack immediately before
-making a function call, and pop them off the stack right after.
-This does not replace your need to save callee-saved registers
-that you plan to use, it is just another occasion to spill
-register values onto the stack for temporary storage.</p></li>
-</ol>
-
-<h2>Shifts and masks</h2>
-
-<p>To extract parts of a single word, you need to think of the value as
-a collection of bits, rather than as a single integer value. When
-using <code>mov</code>, <code>add</code>, <code>orr</code>, <code>and</code>, etc., you can use the barrel
-shifter to move values around. For example, to extract the green
-part of a color, you could do the following. This assumes the entire
-color value is in r7, and it puts just the green part into r6:</p>
-
-<pre><code>mov r6, #0xff
-</code></pre>
-
-<p>This loads 0xff (called a <em>mask</em>) into r6, which is the number
-11111111 (8 bits that are 1) in binary. When you <code>and</code> another value
-with that number, it will leave those eight bits alone, and will set
-all other bits in the word to zero. This instruction:</p>
-
-<pre><code>and r6, r6, r7, lsr #8
-</code></pre>
-
-<p>takes the value in r7 and shifts it right either times. Since the
-green part of the color normally occupies bits 8–15, this shifts
-them into positions 0–7. It then performs the <code>and</code> operation with
-the mask value, thus turning off all other bits and leaving only the
-value of the green color channel in r6. The bits are also in the
-right bit positions so that the green value will be between 0 and
-255.</p>
-
-<p>Similar code can be used to isolate the red part (shift right 16
-times instead of 8) and the blue part (no shifting required, just
-<code>and</code> with the mask value).</p>
-
-<h2>Testing</h2>
-
-<p>To test your code as a standalone program, use the <code>_start</code> block
-included in <code>start.s</code>.</p>
+<p>The starter code also include a file <code>params.s</code> that defines some
+data in the data segment, including <code>filename</code>, <code>xsize</code>, and
+<code>ysize</code>. You should use these values and not hard-code them
+anywhere.</p>
 </body></html>
