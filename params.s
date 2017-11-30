@@ -4,6 +4,6 @@
 filename:       .asciz  "fractal.ppm"
 
                 .balign
-xsize:          .word   1024
-ysize:          .word   768
+xsize:          .word   256
+ysize:          .word   1
 iters:          .word   255

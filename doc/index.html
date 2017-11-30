@@ -1,103 +1,16 @@
-<html><head></head><body><h1>Create a file with a header</h1>
+<html><head></head><body><h1>Create a file with one row of pixels</h1>
 
-<p>In this project, you will use the functions you have written in
-previous steps to generate a complete .ppm image with a gradient
-color fill.</p>
-
-<h2>start and run</h2>
-
-<p>You will be writing a standalone program, but it must also be tested
-using a unit test framework. The included file <code>start.s</code> is
-necessary when running the code as a standalone program. All it does
-is call the function <code>run</code> and then exit.</p>
-
-<p>When you are running your code using unit tests (for grading or the
-&#34;test&#34; action), the <code>start.s</code> file will be ignored.</p>
-
-<p>The bulk of your code for this project will be written in a function
-called <code>run</code>.</p>
-
-<h2>System calls</h2>
-
-<p>A system call is similar to a function call, except that the call is
-being made to the operating system instead of to more code within
-your program. The basic process is the same as for a function call,
-with parameters going in the same registers (at least for the
-parameters we will use). In addition, the system call number must be
-loaded into the r7 register, and then instead of issuing a “bl”
-instruction, you should issue a “svc #0” instruction.</p>
-
-<p>For example, to write a message to stdout (which always has the file
-descriptor 1):</p>
-
-<pre><code class="language-asm">mov r0, #1                      @ stdout
-ldr r1, =buffer                 @ where to find the data to write
-mov r2, #20                     @ number of bytes to write
-mov r7, #sys_write              @ sys_write is 1, defined elsewhere
-svc #0
-</code></pre>
-
-<p>The result of the call is in r0 after the call finishes. If this
-value is negative, it normally indicates an error.</p>
-
-<p>While testing your code, it may be helpful to use an error status
-code as the value in a call to exit. If you do this, then you can
-look up the error code in this chart (the syscall result is the
-error code negated):</p>
-
-<pre><code class="language-c">#define EPERM        1  /* Operation not permitted */
-#define ENOENT       2  /* No such file or directory */
-#define ESRCH        3  /* No such process */
-#define EINTR        4  /* Interrupted system call */
-#define EIO          5  /* I/O error */
-#define ENXIO        6  /* No such device or address */
-#define E2BIG        7  /* Argument list too long */
-#define ENOEXEC      8  /* Exec format error */
-#define EBADF        9  /* Bad file number */
-#define ECHILD      10  /* No child processes */
-#define EAGAIN      11  /* Try again */
-#define ENOMEM      12  /* Out of memory */
-#define EACCES      13  /* Permission denied */
-#define EFAULT      14  /* Bad address */
-#define ENOTBLK     15  /* Block device required */
-#define EBUSY       16  /* Device or resource busy */
-#define EEXIST      17  /* File exists */
-#define EXDEV       18  /* Cross-device link */
-#define ENODEV      19  /* No such device */
-#define ENOTDIR     20  /* Not a directory */
-#define EISDIR      21  /* Is a directory */
-#define EINVAL      22  /* Invalid argument */
-#define ENFILE      23  /* File table overflow */
-#define EMFILE      24  /* Too many open files */
-#define ENOTTY      25  /* Not a typewriter */
-#define ETXTBSY     26  /* Text file busy */
-#define EFBIG       27  /* File too large */
-#define ENOSPC      28  /* No space left on device */
-#define ESPIPE      29  /* Illegal seek */
-#define EROFS       30  /* Read-only file system */
-#define EMLINK      31  /* Too many links */
-#define EPIPE       32  /* Broken pipe */
-#define EDOM        33  /* Math argument out of domain of func */
-#define ERANGE      34  /* Math result not representable */
-</code></pre>
-
-<p>The syscalls you will need in this assignment are as follows:</p>
-
-<ul>
-<li>4: <code>sys_write(fd, buffer, count)</code> returns the number of bytes
-written, or negative to signal an error.</li>
-<li>5: <code>sys_open(filename, flags, mode)</code> returns the file
-descriptor, or negative to signal an error.</li>
-<li>6: <code>sys_close(fd)</code> returns negative to signal an error.</li>
-<li>1: <code>sys_exit(status)</code> does not return.</li>
-</ul>
+<p>In this step you will change your <code>run</code> function to write a single
+row of pixels to the output file in addition to the header that you
+wrote earlier.</p>
 
 <h2>What to write</h2>
 
 <p>For this first step, you will create a file, write a header to it,
-close the file, and then return.</p>
+generate a single row of pixels with a gradient pattern, write it to
+the file, close the file, and then return.</p>
 
-<p>Your code should implement this pseudo-code in <code>run.s</code>:</p>
+<p>Your code should implement this pseudo-code:</p>
 
 <pre><code>fd = open(filename, flags, mode)
 if fd &lt; 0: return fail_open
@@ -107,17 +20,22 @@ length = writeHeader(buffer, xsize, ysize)
 status = write(fd, buffer, length)
 if status &lt; 0: return fail_writeheader
 
+# write a single row of pixels
+length = 0
+for column in range(xsize):
+    color = column &lt;&lt; 8
+    length += writeRGB(buffer+length, color)
+    buffer[length] = &#39; &#39;
+    length += 1
+
+# replace last space with a newline
+buffer[length-1] = &#39;\n&#39;
+status = write(fd, buffer, length)
+if status &lt; 0: return fail_writerow
+
 # close the file
 status = close(fd)
 if status &lt; 0: return fail_close
 return 0
 </code></pre>
-
-<p>The starter code include constant definitions for flags and mode as
-well as for the system calls you will need.</p>
-
-<p>The starter code also include a file <code>params.s</code> that defines some
-data in the data segment, including <code>filename</code>, <code>xsize</code>, and
-<code>ysize</code>. You should use these values and not hard-code them
-anywhere.</p>
 </body></html>
