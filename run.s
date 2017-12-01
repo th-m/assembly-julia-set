@@ -73,7 +73,7 @@ run:
   bl writeRGB @length += writeRGB
   add r5, r5, r0 @adds the output and the length of the buffer and stores it in register 5
   mov r0, #' ' @ buffer[length] = ' '
-  strb r0, [r6, r5] @buffer[length] = ' ' [buffer and position]
+  strb r0, [r6, r5] @buffer[length] = r0 val to store =' ' [(store in buffer) and at (position)]
   add r5, r5, #1 @length += 1
   
   add r7, r7, #1 @adds one to register 7
@@ -82,7 +82,23 @@ run:
   cmp r1, r7 @ compares register 7 with register 1
   bgt 3b  @branches if register 7 is greater tahn or equal to register 1
 @status = close(fd)
-@if status < 0: return fail_close
+@if status < 0: return f ail_close
+4:
+  mov r5, #'\n'
+  sub r1, r5, #1
+  strb r0, [r6, r1]
+  @mov	r2, r0			@stores the buffer length into register 2
+	mov	r0, r4			@moves the file descriptor into register 4
+	ldr	r1, =buffer		@moves the buffer into register 1
+  mov r2, r5
+	mov	r7, #sys_write		@moves sys_write into register 7
+	svc	#0			@calls to the system call
+  cmp r0, #0
+  bge 6f
+  mov r0, #fail_writerow
+  pop   {r4,r5,r6,r7,r8,r9,ip,pc} @pops register from the stack
+  
+  
 6:
 	mov	r0, r4			@moves the file descriptor into register 0
 	mov	r7, #sys_close		@moves sys_close into register 7
