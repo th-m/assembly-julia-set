@@ -44,6 +44,7 @@ run:
 	pop	{r4,r7,ip,pc}		@pops register from the stack
 
 
+@write the header
 @bufsize = writeHeader(buffer, xsize, ysize)
 @status = write(fd, buffer, bufsize)
 @if status < 0: return fail_writeheader
@@ -69,6 +70,8 @@ run:
 @ write a single row of pixels
 3:
   mov r5, #0 @length = 0
+4:
+  @ color = column << 8
   
   bl writeRGB @length += writeRGB
   add r5, r5, r0 @adds the output and the length of the buffer and stores it in register 5
@@ -78,12 +81,12 @@ run:
   
   add r7, r7, #1 @adds one to register 7
   ldr r1, =xsize @loads xsize into register 1
-  ldr r1, [r1] @ loads teh value of xsize into register 1
+  ldr r1, [r1] @ loads the value of xsize into register 1
   cmp r1, r7 @ compares register 7 with register 1
-  bgt 3b  @branches if register 7 is greater tahn or equal to register 1
+  bgt 4b  @branches if register 7 is greater tahn or equal to register 1
 @status = close(fd)
 @if status < 0: return f ail_close
-4:
+5:
   mov r5, #'\n'
   sub r1, r5, #1
   strb r0, [r6, r1]
@@ -98,6 +101,14 @@ run:
   mov r0, #fail_writerow
   pop   {r4,r5,r6,r7,r8,r9,ip,pc} @pops register from the stack
   
+@5:
+@  mov r5, #0
+@  mov r7, #0
+@  add r9, r9, #1
+@  ldr r8, =ysize
+@  ldr r8, [r8]
+@  cmp r9, r8
+@  blt 3b
   
 6:
 	mov	r0, r4			@moves the file descriptor into register 0
