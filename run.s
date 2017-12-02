@@ -38,7 +38,8 @@ run:
 	mov	r7, #sys_open		@loads sys_open into register 7
 	svc	#0			@calls to the system call
 	cmp	r0, #0			@compares the return to 0
-	mov	r4, r0			@moves the file descriptor to r4
+  @ we have a branch but an action before, is this legal???
+	@mov	r4, r0			@moves the file descriptor to r4
 	bge	2f			@branches if call didnt fail
 	mov	r0, #fail_open		@if call failed move fail code into standard out
 	pop	{r4,r7,ip,pc}		@pops register from the stack
@@ -70,22 +71,34 @@ run:
 @ write a single row of pixels
 3:
   mov r5, #0 @length = 0
+  mov r8, #0
+  mov	r1, r7			@moves column into r1
+  mov	r2, r9			@moves row into r2
+
 4:
   @ color = column << 8
+  @mov r0, =Buffer
+  @add r0, r0, r5
+  @mov r1, r5, lsl #8
+  @add r0, r0, r5
   
+  @mov	r6, #0xff		@moves a mask into r6
+  @and	r8, r6, r7, lsr #8	@puts the green value into r8
+  mov r8, r8, lsl #8
   bl writeRGB @length += writeRGB
   add r5, r5, r0 @adds the output and the length of the buffer and stores it in register 5
   mov r0, #' ' @ buffer[length] = ' '
+  @mov r6, #' ' @ buffer[length] = ' '
   strb r0, [r6, r5] @buffer[length] = r0 val to store =' ' [(store in buffer) and at (position)]
   add r5, r5, #1 @length += 1
-  
+
   add r7, r7, #1 @adds one to register 7
   ldr r1, =xsize @loads xsize into register 1
   ldr r1, [r1] @ loads the value of xsize into register 1
   cmp r1, r7 @ compares register 7 with register 1
   bgt 4b  @branches if register 7 is greater tahn or equal to register 1
-@status = close(fd)
-@if status < 0: return f ail_close
+@@status = close(fd)
+@@if status < 0: return f ail_close
 5:
   mov r5, #'\n'
   sub r1, r5, #1
@@ -100,7 +113,7 @@ run:
   bge 6f
   mov r0, #fail_writerow
   pop   {r4,r5,r6,r7,r8,r9,ip,pc} @pops register from the stack
-  
+
 @5:
 @  mov r5, #0
 @  mov r7, #0
@@ -109,7 +122,7 @@ run:
 @  ldr r8, [r8]
 @  cmp r9, r8
 @  blt 3b
-  
+@
 6:
 	mov	r0, r4			@moves the file descriptor into register 0
 	mov	r7, #sys_close		@moves sys_close into register 7
