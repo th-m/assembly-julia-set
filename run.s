@@ -97,6 +97,9 @@ push	{r4,r5,r6,r7,r8,r9,r10,r11,ip,lr}
   ble 3b
 
 5:
+  mov	r0, #'\n'		@moves a newline character into register 0
+  sub	r1, r9, #1		@subtracts 1 from the length of the buffer and stores it in register 1
+  strb	r0, [r5, r1]		@stores the newline character in the buffer at position register 1
   mov	r0, r4			@moves the file descriptor into register 0
   ldr	r1, =buffer		@moves the buffer into register 1
   mov	r2, r9			@moves the length of the buffer into register 2
