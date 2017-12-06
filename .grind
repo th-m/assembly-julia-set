@@ -3,9 +3,10 @@
     "problems": {
         "cs2810-arm-mandelbrot": {
             "id": 38,
-            "step": 7,
+            "step": 8,
             "whitelist": {
                 "itoa.s": true,
+                "mandel.s": true,
                 "params.s": true,
                 "run.s": true,
                 "start.s": true,
