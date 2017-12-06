@@ -88,7 +88,7 @@ push	{r4,r5,r6,r7,r8,r9,r10,r11,ip,lr}
   add r9, r9, #1 @length += 1
   
 
-xloop:
+4:
   add r8, r8, #1
   ldr r7, =xsize @loads xsize into register 1
   ldr r7, [r7]
@@ -96,7 +96,16 @@ xloop:
   cmp r8, r7 @ compares register 7 with register 1
   ble 3b
 
-yloop:
+5:
+  mov	r0, r4			@moves the file descriptor into register 0
+  ldr	r1, =buffer		@moves the buffer into register 1
+  mov	r2, r9			@moves the length of the buffer into register 2
+  mov	r7, #sys_write		@moves the system_write number into register 7
+  svc	#0			@executes a call to the system
+  ldr r5, =buffer @ store buffer in r5
+  mov r9, #0 @ reset length of buffer back to 0
+  @cmp	r0, #0			@compares the return value to 0
+
   add r11, r11, #1
   mov r8, #0
   ldr r10, =ysize
