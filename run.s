@@ -16,7 +16,7 @@
 
 @ run() -> exit code
 run:
-push	{r4,r5,r6,r7,r8,r9,ip,lr}
+push	{r4,r5,r6,r7,r8,r9,r10,r11,ip,lr}
 @r0: first parameter for the system call
 @r1: second parameter for the system call
 @r2: third parameter for the system call
@@ -66,33 +66,46 @@ push	{r4,r5,r6,r7,r8,r9,ip,lr}
   @ NOTE reset r5, r2, and r8 for row loop
   mov r0, #0
   ldr r5, =buffer @ store buffer in r5
-  @mov r4, r2
   mov r9, #0 @ reset length of buffer back to 0
   mov r8, #0 @length = 0
+  mov r11, #0
   
-  bge	4f			@branches if the call didnt fail
+  bge	3f			@branches if the call didnt fail
   mov	r0, #fail_writeheader	@if call failed move fail code into standard out
   pop	{r4,r7,r9,pc}		@pops register from the stack
 
 @ write a single row of pixels
 3:
-  mov r1, r8, lsl #8
+  mov r7, r8, lsl #8
+  mov r10, r11, lsl #16
+  @mov r1, r8, lsl #8
+  add r1, r7, r10
   add r0, r9, r5 @adds the buffer and the length of the buffer and stores it in register 0
   bl writeRGB @returns total length of bytes writtn in r0
   add r9, r9, r0
   mov r7, #' ' @ buffer[length] = ' '
   strb r7, [r5, r9] @adds one to register 7
   add r9, r9, #1 @length += 1
-  add r8, r8, #1
+  
 
-4:
+xloop:
+  add r8, r8, #1
   ldr r7, =xsize @loads xsize into register 1
   ldr r7, [r7]
   sub r7, r7, #1
   cmp r8, r7 @ compares register 7 with register 1
   ble 3b
 
-5:
+yloop:
+  add r11, r11, #1
+  mov r8, #0
+  ldr r10, =ysize
+  ldr r10, [r10]
+  sub r10, r10, #1
+  cmp r11, r10
+  ble 3b
+
+8:
   mov	r0, #'\n'		@moves a newline character into register 0
   sub	r1, r9, #1		@subtracts 1 from the length of the buffer and stores it in register 1
   strb	r0, [r5, r1]		@stores the newline character in the buffer at position register 1
@@ -102,22 +115,22 @@ push	{r4,r5,r6,r7,r8,r9,ip,lr}
   mov	r7, #sys_write		@moves the system_write number into register 7
   svc	#0			@executes a call to the system
   cmp	r0, #0			@compares the return value to 0
-  bge	6f			@branches if the call didn't fail
+  bge	9f			@branches if the call didn't fail
   mov	r0, #fail_writerow	@moves the fail number into register 0
-  pop	{r4,r5,r6,r7,r8,r9,ip,pc}	@pops off the stack, returning to _start
+  pop	{r4,r5,r6,r7,r8,r9,r10,r11,ip,pc}	@pops off the stack, returning to _start
 
-6:
+9:
   mov	r0, r4			@moves the file descriptor into register 0
   mov	r7, #sys_close		@moves sys_close into register 7
   svc	#0			@executes a call to the system
   cmp	r0, #0			@compares the return to 0
-  bge	7f			@branches if the call didnt fail
+  bge	10f			@branches if the call didnt fail
   mov	r0, #fail_close		@if the call failed, move fail code into standard out
-  pop	{r4,r5,r6,r7,r8,r9,ip,pc}	@pops register from the stack
+  pop	{r4,r5,r6,r7,r8,r9,r10,r11,ip,pc}	@pops register from the stack
 
-7:
+10:
   mov   r0, #0       @moves 0 into register 0 it says 
-  pop   {r4,r5,r6,r7,r8,r9,ip,pc} @pops register from the stack
+  pop   {r4,r5,r6,r7,r8,r9,r10,r11,ip,pc} @pops register from the stack
 
 
 .bss
