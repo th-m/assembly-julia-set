@@ -23,7 +23,7 @@ itoa:
 			mov	r5, r5, lsr #3        @ shift: new_n is in r5
 			add	r4, r5, r5, lsl #2    @ compute new_n*5
 			sub	r4, r1, r4, lsl #1    @ remainder = n - new_n*5*2
-			add	r4, r4, #'0'          @ convert to a digit
+			add	r4, r4, #'0'         @ convert to a digit
 			strb	r4, [r0, r2]          @ store in buffer
 			add	r2, r2, #1            @ length++
 			subs	r1, r5, #0            @ n = new and compare with 0

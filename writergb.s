@@ -14,7 +14,7 @@ writeRGB:
   @r9: red part
   @r10: blue part
 1:
-  mov	r4, r0			@moves buffer to a saved register
+  mov	r4, #0			@moves buffer to a saved register
   mov	r5, r0			@moves buffer to a saved register
   mov	r7, r1			@moves rgb value to a saved register
   mov	r6, #0xff		@moves a mask into r6
