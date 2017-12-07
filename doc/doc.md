@@ -1,176 +1,112 @@
-Mandelbrot main loop
-====================
+calcPixel
+=========
 
-Implement the main Mandelbrot calculation in a function called
-“mandel”:
+`mandel` works on floating point coordinates, but you must generate
+an image with discrete pixels. In the next step you will calculate
+points based on their location in a 256×256 image centered at the
+origin. You will also convert the number of iterations into a shade
+of gray.
 
-* `mandel(maxIterations, x, y)` → `iterations`
-
-Note that `maxIterations` is an integer, while `x` and `y` are
-float values. The calling convention dictates that the integer
-parameter is passed in r0 (as usual) while the float parameters are
-passed in d0 and d1, respectively. The return value (an integer)
-is still return in r0.
+Once this step is complete, you will have the functionality required
+to compute a pixel color for each point in a complete image.
 
 
-The formula
------------
+The parameters
+--------------
 
-The Mandelbrot set is a set of complex numbers. To determine whether
-or not a number is in the set, a formula is applied iteratively. If
-the number ever achieves a magnitude of 2.0 or higher, it will
-“escape”, meaning that the value will get larger and larger without
-bounds if the process is continued. These numbers are not part of
-the set. The Mandelbrot set consists of all complex numbers that
-never escape that threshold.
+To simplify the computation, you will assume that the image to be
+generated is 256×256 pixels, and it will compute a Mandelbrot image
+centered at the origin with 0.25 magnification. We will save the
+details for the next project, but for now this means that you can
+convert a pixel coordinate (a column and row number) to complex
+plane coordinates (x and y float values) as follows:
 
-If we plot complex numbers on a plane, this means that members of
-the Mandelbrot set will remained confined to a circle on the plane
-of radius 2.0, centered on the origin. For numbers outside the set,
-the plot would eventually escape the circle and then would rapidly
-fly out toward infinity.
-
-The formula is simple. If the number is c, we start with z set to
-zero and repeat the formula:
-
-* z’ = z² + c
-
-Bear in mind that z and c are complex numbers. We can represent a
-complex number using two real numbers—representing the real and
-imaginary parts, respectively—approximated using two doubles. When
-expressed this way, the formula becomes:
-
-* z’ = (zr + i·zi)² + (cr + i·ci)
-* z’ = zr² + i²·zi² + i·2·zr·zi + cr + i·ci
-
-Since i² = -1, we can simplify to:
-
-* z’ = zr² - zi² + i·2·zr·zi + cr + i·ci
-
-Splitting z’ into its real and imaginary parts, we get:
-
-* zr’ = zr² - zi² + cr
-* zi’ = 2·zr·zi + ci
-
-To make it easier to follow, we can use “a” and “b” instead of zr
-and zi, and “x” and “y” instead of “cr” and “ci”, giving a formula
-of:
-
-* a’ = a² - b² + x
-* b’ = 2·a·b + y
-
-To test if a given value of z has reached the threshold of |z| ≥
-2.0, we test if a² + b² ≥ 4.0 (this avoids an expensive √ (square
-root) operation).
-
-When given a single value for c and a maximum number of iterations
-n, your job is to apply the formula up to n times and see if the
-threshold is ever reached. If not, you will assume that c is in the
-Mandelbrot set, and if it is, you should note how many iterations
-were required to reach the threshold value.
+* x = (column - 128) / (255.0 / 4.0)
+* y = -(row - 128) / (255.0 / 4.0)
 
 
-Float instructions
-------------------
+The code
+--------
 
-Floating point calculations require different registers than the
-familiar integer registers. d0 through d15 each hold 64-bit floats.
-The instructions you will need to user are summarized on the
-assembly language reference posted on the course website.
+In `calcpixel.s`, write the function calcPixel, which should work
+as follows:
 
-d0–d15 are all caller-saved, meaning that you are free to use any of
-them within a function, but you must save any important values
-before making a function call.
+* `calcPixel(maxIterations, column, row)` → `rgb`
 
+`calcPixel` converts the column and row numbers into *x* and *y*
+coordinates as indicated above, then calls `mandel` to compute the
+number of iterations. It then passes the number of iterations to
+`getColor` (which is provided) to get an RGB color value.
 
-The calculation
----------------
+Since `calcPixel` needs to call `mandel`, it must pass double values
+as parameters. Just as `mandel` expects its first two double
+parameters to be in d0 and d1 when it is called, `calcPixel` must
+put those parameters in those registers before calling `mandel`.
 
-The parameters *x* and *y* will be passed in using the d0 and d1
-registers, respectively, so it is convenient to leave them there. I
-recommend allocating registers as follows:
+`getColor` is a simple function that copies its input value (the
+number of iterations) into the red, green, and blue channels of a
+single RGB value, resulting in a shade of gray. A pixel with few
+iterations will be a dark shade of gray, and one with close to 255
+iterations will be very close to white. This function is a
+placeholder—in a later project this function will look up a color
+from a palette.
 
-* d0: x
-* d1: y
-* d2: a
-* d3: b
-* d4: a²
-* d5: b²
-* d6: a² + b²
-* d7: 4.0
+Note that both *x* and *y* require division with a divisor of (255.0
+/ 4.0). I suggest computing this value once at the beginning of
+`calcPixel` (store it in one of the `d` registers) and then use it in
+the computation of *x* and *y*.
 
-You can compute a² by copying a into place, then multiplying it by
-itself. Once a² and b² are computed, getting a² + b² is simple. Load
-4.0 into d7 right at the beginning, then you will have it readily
-available for comparisons.
-
-The computation can proceed according to the following pseudo code:
-
-* load 4.0 into d7
-* copy maxIterations to r1
-* set r0 (number of iterations) to 1
-* copy x into a, and y into b
-* forever:
-    * compute a², b², and a² + b²
-    * if a² + b² ≥ 4.0, return iterations
-    * increment iteration count
-    * if iterations > maxIterations, return 0
-    * compute b = 2ab + y (this can be computed in-place,
-        overwriting the old value of b)
-    * compute a = a² - b² + x (this can be computed in-place,
-        overwriting the old value of a; note that a² and b² are
-        already computed)
-
-Technically, a and b both start at 0.0, but the first iteration is
-not very interesting, so we skip it by copying x to a and y to b,
-then jumping directly to the bailout test. Only if the bailout test
-(and max iteration test) fails do we compute the next values for a
-and b.
+Note: you should not need to modify `getcolor.s` at all for this
+project.
 
 
 Testing
 -------
 
-A `start.s` file is provided. It will call `mandel` with a simple
-test case, and will use the return value of `mandel` as the exit
-status code. For the default test case, you should expect an exit
-status code of 2. When you run the code with `make run` or
- `grind action run`, make should report that as the error number.
-For example:
+A `start.s` file is provided. It will call `calcPixel` with a simple
+test case, and will use the blue color value of the return value of
+`calcPixel` as the exit status code. For the default test case, you
+should expect an exit status code of 0. When you run the code with
+`make run` or `grind action run`, make should report this as a
+success. For example:
 
     $ make run
+    as -g -march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp getcolor.s -o getcolor.o
+    as -g -march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp calcpixel.s -o calcpixel.o
     as -g -march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp start.s -o start.o
     as -g -march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp mandel.s -o mandel.o
-    ld --fatal-warnings start.o mandel.o
+    ld --fatal-warnings getcolor.o calcpixel.o start.o mandel.o
+    ./a.out
+
+When you get that much working, change `start.s` to load `col2` and
+`row2` instead of `col1` and `row1` as the test values when it calls
+`calcPixel`. The expected output for this case is 1 (the point at
+that location escapes the threshold value after a single iteration),
+so your code should return the color value `0x010101`. make will
+report the blue part of this color as the error number:
+
+    $ make run
+    as -g -march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp getcolor.s -o getcolor.o
+    as -g -march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp calcpixel.s -o calcpixel.o
+    as -g -march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp start.s -o start.o
+    as -g -march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp mandel.s -o mandel.o
+    ld --fatal-warnings getcolor.o calcpixel.o start.o mandel.o
     ./a.out
     Makefile:20: recipe for target 'run' failed
-    make: *** [run] Error 2
+    make: *** [run] Error 1
 
-When you get that much working, change `start.s` to load `x2` and
-`y2` instead of `x1` and `y1` as the test values when it calls
-`mandel`. The expected output for that point is 0 (the point is
-inside the Mandelbrot set, so your code should bail out and return
-zero). make will report this as success, since a zero return value
-normally indicates that:
+The third test case (use `col3` and `row3`) should return
+`0x373737`, and the blue part of that color is `0x37` or decimal 55:
 
     $ make run
+    as -g -march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp getcolor.s -o getcolor.o
+    as -g -march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp calcpixel.s -o calcpixel.o
     as -g -march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp start.s -o start.o
     as -g -march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp mandel.s -o mandel.o
-    ld --fatal-warnings start.o mandel.o
-    ./a.out
-
-The third test case (use `x3` and `y3`) should return 68, resulting
-in something like:
-
-    $ make run
-    as -g -march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp start.s -o start.o
-    as -g -march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp mandel.s -o mandel.o
-    ld --fatal-warnings start.o mandel.o
+    ld --fatal-warnings getcolor.o calcpixel.o start.o mandel.o
     ./a.out
     Makefile:20: recipe for target 'run' failed
-    make: *** [run] Error 68
+    make: *** [run] Error 55
 
 After you get all three of these test cases working, run the full
-suite of tests using `grind action test` or `make test` (if you are
-running on an ARM machine). Do not forget to run `grind grade` when
-you pass all of the tests.
+suite of tests.
