@@ -1,113 +1,16 @@
-<html><head></head><body><h1>calcPixel</h1>
+<html><head></head><body><h1>Fixed image</h1>
 
-<p><code>mandel</code> works on floating point coordinates, but you must generate
-an image with discrete pixels. In the next step you will calculate
-points based on their location in a 256×256 image centered at the
-origin. You will also convert the number of iterations into a shade
-of gray.</p>
+<p>It is time to bring everything together and generate a complete
+Mandelbrot image with fixed parameters.</p>
 
-<p>Once this step is complete, you will have the functionality required
-to compute a pixel color for each point in a complete image.</p>
+<p>Modify the main loop in <code>run</code> to call <code>calcPixel</code> to get the RGB
+value for each pixel instead of generating the color based on the
+row and column values. Be sure to pass the correct parameters to
+<code>calcPixel</code>. The maximum number of iterations should be loaded from
+the <code>iters</code> field in <code>params.s</code>; it should not be hard-coded in
+<code>run.s</code>.</p>
 
-<h2>The parameters</h2>
+<p>When you run your code, you should get this exact image:</p>
 
-<p>To simplify the computation, you will assume that the image to be
-generated is 256×256 pixels, and it will compute a Mandelbrot image
-centered at the origin with 0.25 magnification. We will save the
-details for the next project, but for now this means that you can
-convert a pixel coordinate (a column and row number) to complex
-plane coordinates (x and y float values) as follows:</p>
-
-<ul>
-<li>x = (column - 128) / (255.0 / 4.0)</li>
-<li>y = -(row - 128) / (255.0 / 4.0)</li>
-</ul>
-
-<h2>The code</h2>
-
-<p>In <code>calcpixel.s</code>, write the function calcPixel, which should work
-as follows:</p>
-
-<ul>
-<li><code>calcPixel(maxIterations, column, row)</code> → <code>rgb</code></li>
-</ul>
-
-<p><code>calcPixel</code> converts the column and row numbers into <em>x</em> and <em>y</em>
-coordinates as indicated above, then calls <code>mandel</code> to compute the
-number of iterations. It then passes the number of iterations to
-<code>getColor</code> (which is provided) to get an RGB color value.</p>
-
-<p>Since <code>calcPixel</code> needs to call <code>mandel</code>, it must pass double values
-as parameters. Just as <code>mandel</code> expects its first two double
-parameters to be in d0 and d1 when it is called, <code>calcPixel</code> must
-put those parameters in those registers before calling <code>mandel</code>.</p>
-
-<p><code>getColor</code> is a simple function that copies its input value (the
-number of iterations) into the red, green, and blue channels of a
-single RGB value, resulting in a shade of gray. A pixel with few
-iterations will be a dark shade of gray, and one with close to 255
-iterations will be very close to white. This function is a
-placeholder—in a later project this function will look up a color
-from a palette.</p>
-
-<p>Note that both <em>x</em> and <em>y</em> require division with a divisor of (255.0
-/ 4.0). I suggest computing this value once at the beginning of
-<code>calcPixel</code> (store it in one of the <code>d</code> registers) and then use it in
-the computation of <em>x</em> and <em>y</em>.</p>
-
-<p>Note: you should not need to modify <code>getcolor.s</code> at all for this
-project.</p>
-
-<h2>Testing</h2>
-
-<p>A <code>start.s</code> file is provided. It will call <code>calcPixel</code> with a simple
-test case, and will use the blue color value of the return value of
-<code>calcPixel</code> as the exit status code. For the default test case, you
-should expect an exit status code of 0. When you run the code with
-<code>make run</code> or <code>grind action run</code>, make should report this as a
-success. For example:</p>
-
-<pre><code>$ make run
-as -g -march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp getcolor.s -o getcolor.o
-as -g -march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp calcpixel.s -o calcpixel.o
-as -g -march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp start.s -o start.o
-as -g -march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp mandel.s -o mandel.o
-ld --fatal-warnings getcolor.o calcpixel.o start.o mandel.o
-./a.out
-</code></pre>
-
-<p>When you get that much working, change <code>start.s</code> to load <code>col2</code> and
-<code>row2</code> instead of <code>col1</code> and <code>row1</code> as the test values when it calls
-<code>calcPixel</code>. The expected output for this case is 1 (the point at
-that location escapes the threshold value after a single iteration),
-so your code should return the color value <code>0x010101</code>. make will
-report the blue part of this color as the error number:</p>
-
-<pre><code>$ make run
-as -g -march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp getcolor.s -o getcolor.o
-as -g -march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp calcpixel.s -o calcpixel.o
-as -g -march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp start.s -o start.o
-as -g -march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp mandel.s -o mandel.o
-ld --fatal-warnings getcolor.o calcpixel.o start.o mandel.o
-./a.out
-Makefile:20: recipe for target &#39;run&#39; failed
-make: *** [run] Error 1
-</code></pre>
-
-<p>The third test case (use <code>col3</code> and <code>row3</code>) should return
-<code>0x373737</code>, and the blue part of that color is <code>0x37</code> or decimal 55:</p>
-
-<pre><code>$ make run
-as -g -march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp getcolor.s -o getcolor.o
-as -g -march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp calcpixel.s -o calcpixel.o
-as -g -march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp start.s -o start.o
-as -g -march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp mandel.s -o mandel.o
-ld --fatal-warnings getcolor.o calcpixel.o start.o mandel.o
-./a.out
-Makefile:20: recipe for target &#39;run&#39; failed
-make: *** [run] Error 55
-</code></pre>
-
-<p>After you get all three of these test cases working, run the full
-suite of tests.</p>
+<p><img src="data:image/png;base64,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" alt="Fixed Mandelbrot image"/></p>
 </body></html>

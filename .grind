@@ -3,7 +3,7 @@
     "problems": {
         "cs2810-arm-mandelbrot": {
             "id": 38,
-            "step": 9,
+            "step": 10,
             "whitelist": {
                 "calcpixel.s": true,
                 "getcolor.s": true,

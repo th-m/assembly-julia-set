@@ -76,9 +76,10 @@ push	{r4,r5,r6,r7,r8,r9,r10,r11,ip,lr}
 
 @ write a single row of pixels
 3:
-  mov r7, r8, lsl #8
-  mov r10, r11, lsl #16
+  @mov r7, r8, lsl #8 @r7
+  @mov r10, r11, lsl #16
   @mov r1, r8, lsl #8
+  @ADDD CALC PIXELS HERE AND FIGURE OUT WHER EITERS GO
   add r1, r7, r10
   add r0, r9, r5 @adds the buffer and the length of the buffer and stores it in register 0
   bl writeRGB @returns total length of bytes writtn in r0

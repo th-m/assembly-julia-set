@@ -5,14 +5,11 @@
     four:	.double 4.0
 
 @ mandel(maxiters, x, y) -> iters
+@ http://cit.dixie.edu/cs/2810/arm-assembly.html
+
 mandel:
   push	{ip,lr}
-  @d0: x		@d4: a^2
-  @d1: y		@d5: b^2
-  @d2: a		@d6: a^2 + b^2
-  @d3: b		@d7: 4.0
-  @r0: iterations
-  @r1: maxiters
+  @double values start in d0 and d1
 1:
   fldd	d7, four	@loads 4.0 into d7
   mov	r1, r0		@copies maxIterations into r1
